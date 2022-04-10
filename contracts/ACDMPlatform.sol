@@ -58,14 +58,19 @@ contract ACDMPlatform
     }
 
     function register(address refer) public {
+        require(refer!= msg.sender, "ACDMPlatform: You can't be refer");
         refers[msg.sender] = Refers({owner: msg.sender, refer: address(0), procent: 0, coefficient: 0 });
         emit Register(msg.sender, refer);
     }
 
+    function getRefer(address refer) public view returns(address owner){
+        return  refers[refer].owner;
+    }
+
     function startSaleRound() public {
-        require(acdmCycle.round == Round.SALE, "This round don't be TRADE");
+        require(acdmCycle.round == Round.SALE, "ACDMPlatform: This round don't be TRADE");
         if (acdmCycle.timeStart == 0){
-            acdmCycle = ACDMCycle(1000, 1/1000 , 0, 0, block.timestamp, roundTime, Round.SALE);
+            acdmCycle = ACDMCycle(1000, 1 , 0, 0, block.timestamp, roundTime, Round.SALE);
         } 
         else{
             //some problem when i try plus uint and double
@@ -74,10 +79,14 @@ contract ACDMPlatform
 
     }
 
+    function getBalanceOf(address address_)public view returns(uint) {
+        return address_.balance;
+    }
+
     function buyACDM(uint256 amount) payable public {
-        require(acdmCycle.totalSupplyACDM - acdmCycle.totalBuyACDM >= amount, "Dont have enough ACDMtokens");
-        require(msg.value >= acdmCycle.lastPriceACMD * amount, "You dont have ETH");
-        require(acdmCycle.round == Round.SALE, "Sale round now");
+        require(acdmCycle.totalSupplyACDM - acdmCycle.totalBuyACDM >= amount, "ACDMPlatform: Dont have enough ACDMtokens");
+        require(getBalanceOf(msg.sender) >= acdmCycle.lastPriceACMD * amount, "ACDMPlatform: You dont have ETH");
+        require(acdmCycle.round == Round.SALE, "ACDMPlatform: Sale round now");
 
         if(refers[msg.sender].owner != address(0)) {
             emit TransferSent(address(this), msg.sender, msg.value * 50 / 1000);
@@ -92,8 +101,8 @@ contract ACDMPlatform
     }
 
     function startTradeRound() public{
-        require(acdmCycle.timeStart + roundTime <= block.timestamp, "Sale round not finished");
-        require(acdmCycle.round == Round.SALE, "Sale round now");
+        require(acdmCycle.timeStart + roundTime <= block.timestamp, "ACDMPlatform: Sale round not finished");
+        require(acdmCycle.round == Round.SALE, "ACDMPlatform: Sale round now");
 
         acdmCycle.round = Round.TRADE;
         acdmCycle.timeStart = block.timestamp;
@@ -103,8 +112,8 @@ contract ACDMPlatform
     }
 
     function addOrder(uint256 amount, uint256 price) public {
-        require(acdmCycle.round == Round.TRADE, "Trade round now");
-        require(ACDMToken(acdmToken).balanceOf(msg.sender) >= amount, "You dont have enough ACDMtokens");
+        require(acdmCycle.round == Round.TRADE, "ACDMPlatform: Trade round now");
+        require(ACDMToken(acdmToken).balanceOf(msg.sender) >= amount, "ACDMPlatform: You dont have enough ACDMtokens");
 
         idOrder++;
         orders[idOrder] = Order(msg.sender, amount, price);
@@ -119,8 +128,8 @@ contract ACDMPlatform
     }
 
     function redeemOrder(uint256 idOrder, uint256 amount) public payable {
-        require(orders[idOrder].ACDMtokens >= amount, "Order dont have enough tokens");
-        require(msg.value >= orders[idOrder].price, "You dont have enough ETH");
+        require(orders[idOrder].ACDMtokens >= amount, "ACDMPlatform: Order dont have enough tokens");
+        require(getBalanceOf(msg.sender) >= orders[idOrder].price, "ACDMPlatform: You dont have enough ETH");
 
         IERC20(acdmToken).transfer(msg.sender, amount);
 
